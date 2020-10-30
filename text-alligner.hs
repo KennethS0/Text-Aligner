@@ -1,25 +1,26 @@
 -- Kenneth Sánchez Ocampo
 
 import Data.Map
+import Data.List
+import Data.Char
 
 -- Datatype definitions
 -- Line: is a synonim to a list of tokens
 type Line = [Token]
 
-
 -- HypMap: Maps a word with its syllable separation  ()
 type HypMap = Data.Map.Map String [String]
-
 
 -- Token: Can take 3 forms Word ("abc"), "Blank" (" "), or "HypWord" ("abc-") 
 data Token = Word String | Blank | HypWord String
              deriving (Eq, Show)
 
 
--- Show for each different token
+-- show':
+-- Turns each token into a string
 show' :: Token -> String
-show' (Word(a)) = a
-show' (HypWord(a)) = a ++ "-" 
+show' (Word a) = a
+show' (HypWord a) = a ++ "-" 
 show' Blank = " "
 
 
@@ -37,16 +38,23 @@ string2line :: String -> Line
 string2line str = [Word x | x <- words str]
 
 
--- line2string:
--- Takes a line as input and returns a string
-line2string :: Line -> String
-line2string [] = ""
-line2string [x] | x == Blank = ""
-                | otherwise = show' x
-line2string (x:xs) | x == Blank = show' x ++ line2string xs
-                   | otherwise = show' x ++ " " ++ line2string xs
+-- combine:
+-- Turns all the Tokens in a Line and turns them into a string
+combine :: Line -> String
+combine [] = ""
+combine [x] | x == Blank = ""
+            | otherwise = show' x
+combine (x:xs) | x == Blank = show' x ++ combine xs
+               | otherwise = show' x ++ " " ++ combine xs
 
--- tokenLenght:
+
+-- line2string:
+-- Turns a Line into a string
+line2string :: Line -> String
+line2string xs = trim(combine xs)
+
+
+-- tokenLength:
 -- Obtains the length of each type of token.
 tokenLength :: Token -> Int
 tokenLength (Word(a)) = length a
@@ -62,32 +70,99 @@ lineLength [x] = tokenLength x
 lineLength (x:xs) = tokenLength x + 1 + lineLength xs
 
 
--- TODO breakLine:
+-- getSepIndex:
+-- Obtains the index of a separation
+getSepIndex :: Int -> Int -> Line -> Int
+getSepIndex ind _ [] = ind
+getSepIndex ind len (x:xs) | len < tokenLength x = ind
+                           | otherwise = getSepIndex (ind + 1) (len - (tokenLength x) - 1) xs 
+
+
+-- breakLine:
 -- Breaks the line at a given index and returns a tuple
 breakLine :: Int -> Line -> (Line, Line)
-breakLine 0 line = ([], line)
+breakLine _ [] = ([], [])
+breakLine a xs = Data.List.splitAt (getSepIndex 0 a xs) xs
 
 
--- TODO mergers:
--- Returns all possible ways of parting a string, keeping the same order
+-- mergers:
+-- Returns all possible ways of combining a list of strings, keeping the same order
 mergers :: [String] -> [(String, String)]
-mergers [x] = []
+mergers xs = [(concat (fst x), concat (snd x)) | x <- zip (inits xs) (tails xs), fst x /= [], snd x /= []]
 
 
--- TODO hyphenate:
+-- removeMaybe:
+-- Removes the Maybe from a list of strings
+removeMaybe :: Maybe [String] -> [String]
+removeMaybe (Just x) = x 
+removeMaybe Nothing = []
+
+
+-- removePunctuation:
+-- Removes any type of punctuation in a string
+removePunctuation :: String -> String
+removePunctuation xs | isAlpha (last xs) = xs
+                     | otherwise = removePunctuation (init xs)
+
+
+-- getPunctuation:
+-- Obtains the punctuation of a word
+getPunctuation :: String -> String
+getPunctuation xs | isAlpha (last xs) = ""
+                  | otherwise = getPunctuation (init xs) ++ [last xs]
+
+
+-- hyphenate:
 -- Separates a Word into a HypWord and another Word
--- hyphenate :: HypMap -> Token -> [(Toke, Token)]
+hyphenate :: HypMap -> Token -> [(Token, Token)]
+hyphenate map a = [(HypWord (fst x), Word (snd x ++ b)) 
+                  | x <- mergers (removeMaybe (Data.Map.lookup (removePunctuation(show' a)) map))]
+                  where
+                         b = getPunctuation (show' a)
 
 
 -- TODO lineBreaks:
 -- Finds the different ways in which a line can be separated, given
 -- a specific number of characters.
--- lineBreaks :: HypMap -> Int -> Line -> [(Line, Line)]
+lineBreaks :: HypMap -> Int -> Line -> [(Line, Line)]
+lineBreaks map a xs = []
 
 
--- TODO insertBlanks:
+-- incrementNby:
+-- Increments the first N elements of a list by K
+incrementNby :: Int -> Int -> [Int] -> [Int]
+incrementNby n k xs = [x + k| x <- fst (split)] ++ [x | x <- snd (split)] 
+              where
+                     split = Data.List.splitAt n xs
+
+
+-- disperse:
+-- Distributes N elements into a list of K elements one by one 
+disperse :: Int -> [Int] -> [Int]
+disperse 0 xs = xs
+disperse a xs | a > length xs = disperse (a - length xs) (incrementNby a 1 xs) 
+              | a <= length xs = disperse 0 (incrementNby a 1 xs)
+
+
+-- generateBlanks:
+-- Generates blanks that will separate each one of the words
+generateBlanks :: Int -> Int -> [Line]
+generateBlanks len amount = [ [Blank | y <- [1..x]] | x <- disperse amount ([0 | x <- [1..(len - 1)]]) ]
+
+
+-- intercalateLines:
+-- Intercalates the elements of one Line with list of Lines
+intercalateLines :: Line -> [Line] -> Line
+intercalateLines xs [] = xs 
+intercalateLines (x:xs) (z:zs) = [x] ++ z ++ intercalateLines xs zs
+
+
+-- insertBlanks:
 -- Distribuites a set amount of blanks between the words of a line.
--- insertBlanks :: Line -> Line
+insertBlanks :: Int -> Line -> Line
+insertBlanks _ [] = []
+insertBlanks _ [x] = [x]
+insertBlanks a xs = intercalateLines xs (generateBlanks (length xs) a)
 
 
 -- TODO separarYalinear:
