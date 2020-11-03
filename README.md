@@ -21,3 +21,5 @@ Haskell interpreter and compiler
 1. ghci app -- This will open the application with Haskell's interpreter.
 2. main -- Run this once ghci runs the program.
 3. A list of commands and their parameters will be shown in screen.
+
+There's a few text files included in the project in order to test its functionality.
