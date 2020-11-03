@@ -16,9 +16,6 @@ type HypMap = Data.Map.Map String [String]
 data Token = Word String | Blank | HypWord String
              deriving (Eq, Show)
 
--- Flag: Determines if a line will be separated or adjusted.
-data Flag = SEPARAR | NOSEPARAR | AJUSTAR | NOAJUSTAR
-
 
 -- show':
 -- Turns each token into a string
@@ -132,7 +129,7 @@ hyphenate map a = [(HypWord (fst x), Word (snd x ++ b))
 lineBreaks :: HypMap -> Int -> Line -> [(Line, Line)]
 lineBreaks map a xs | a > lineLength xs = [(xs, [])]
                     | otherwise = [lines] ++ [(fst lines ++ [fst x], [snd x] ++ (tail (snd lines))) 
-                                                 | x <- hyphenate map (head (snd lines)), lineLength (fst lines ++ [fst x]) <= a]
+                                          | x <- hyphenate map (head (snd lines)), lineLength (fst lines ++ [fst x]) <= a]
               where
                      lines = breakLine a xs
 
@@ -176,32 +173,32 @@ insertBlanks a xs = intercalateLines xs (generateBlanks (length xs) a)
 
 -- TODO separarYalinear:
 -- Separates and alligns the text
-separarYalinear :: HypMap -> Int -> Flag -> Flag -> String -> [String]
+separarYalinear :: HypMap -> Int -> Bool -> Bool -> String -> [String]
 
-separarYalinear map a NOSEPARAR NOAJUSTAR xs | two == [] = [line2string one]
-       | otherwise = [line2string one] ++ separarYalinear map a NOSEPARAR NOAJUSTAR (line2string two)
+separarYalinear map a False False xs | two == [] = [line2string one]
+       | otherwise = [line2string one] ++ separarYalinear map a False False (line2string two)
               where 
                      split = breakLine a (string2line xs)
                      one = fst split
                      two = snd split
 
-separarYalinear map a NOSEPARAR AJUSTAR xs | two == [] = [line2string withBlanks]
-       | otherwise = [line2string withBlanks] ++ separarYalinear map a NOSEPARAR AJUSTAR (line2string two)
+separarYalinear map a False True xs | two == [] = [line2string withBlanks]
+       | otherwise = [line2string withBlanks] ++ separarYalinear map a False True (line2string two)
               where 
                      split = breakLine a (string2line xs)
                      one = fst split
                      two = snd split
                      withBlanks = insertBlanks (a - lineLength one) one
 
-separarYalinear map a SEPARAR NOAJUSTAR xs | two == [] = [line2string one]
-       | otherwise = [line2string one] ++ separarYalinear map a SEPARAR NOAJUSTAR (line2string two)
+separarYalinear map a True False xs | two == [] = [line2string one]
+       | otherwise = [line2string one] ++ separarYalinear map a True False (line2string two)
               where
                      split = last (lineBreaks map a (string2line xs))
                      one = fst split
                      two = snd split
 
-separarYalinear map a SEPARAR AJUSTAR xs | two == [] = [line2string one]
-       | otherwise = [line2string withBlanks] ++ separarYalinear map a SEPARAR AJUSTAR (line2string two)
+separarYalinear map a True True xs | two == [] = [line2string one]
+       | otherwise = [line2string withBlanks] ++ separarYalinear map a True True (line2string two)
               where
                      split = last (lineBreaks map a (string2line xs))
                      one = fst split
