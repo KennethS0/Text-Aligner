@@ -5,7 +5,7 @@ import TextAlligner
 import Data.Map
 import Data.List
 
-type TrueOrFalse = Map String Bool
+type Estado = Map String State
 
 main :: IO ()
 main = do
@@ -64,23 +64,25 @@ mainLoop dictionary = do
         -- split: 
         -- Separates text given by the user and shows it for the user. 
         "split" -> do
-            let m = Data.Map.fromList([("s", True), ("n", False)])
+            let m1 = Data.Map.fromList([("s", AJUSTAR), ("n", NOAJUSTAR)])
+            let m2 = Data.Map.fromList([("s", SEPARAR), ("n", NOSEPARAR)])
 
-            let allign = (remMaybe (Data.Map.lookup (tokens!!2) m))!!0
-            let separate = (remMaybe (Data.Map.lookup (tokens!!3) m))!!0
+            let allign = (remMaybe (Data.Map.lookup (tokens!!2) m2))!!0
+            let separate = (remMaybe (Data.Map.lookup (tokens!!3) m1))!!0
 
             let inputText = Data.List.intercalate " " (Data.List.drop 4 tokens)
-            let outputList = TextAlligner.separarYalinear dictionary (read (tokens!!1) :: Int) allign separate inputText
+            let outputList = init (TextAlligner.separarYalinear dictionary (read (tokens!!1) :: Int) allign separate inputText)
             putStrLn (Data.List.intercalate "\n" outputList) 
             mainLoop dictionary
  
-        -- TODO splitf:
+        -- splitf:
         -- Separates text inside of a file and saves it in another one (optional)
         "splitf" -> do
-            let m = Data.Map.fromList([("s", True), ("n", False)])
+            let m1 = Data.Map.fromList([("s", AJUSTAR), ("n", NOAJUSTAR)])
+            let m2 = Data.Map.fromList([("s", SEPARAR), ("n", NOSEPARAR)])
 
-            let allign = (remMaybe (Data.Map.lookup (tokens!!2) m))!!0
-            let separate = (remMaybe (Data.Map.lookup (tokens!!3) m))!!0
+            let allign = (remMaybe (Data.Map.lookup (tokens!!2) m2))!!0
+            let separate = (remMaybe (Data.Map.lookup (tokens!!3) m1))!!0
 
             inputText <- readFile (tokens!!4)
             let outputList = TextAlligner.separarYalinear dictionary (read (tokens!!1) :: Int) allign separate inputText
@@ -114,6 +116,6 @@ separateBy chr = unfoldr sep where
     sep [] = Nothing
     sep l  = Just . fmap (Data.List.drop 1) . break (== chr) $ l
 
-remMaybe :: Maybe Bool -> [Bool]
+remMaybe :: Maybe State -> [State]
 remMaybe (Just a) = [a]
 remMaybe Nothing = []
